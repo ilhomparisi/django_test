@@ -55,14 +55,20 @@ python manage.py runserver
 
 6. Open your browser and navigate to `http://localhost:8000`
 
-### Docker Deployment
+### Docker Deployment with Dokploy
 
-1. Build and run with Docker Compose:
+1. Build and run with Docker:
 ```bash
-docker-compose up --build
+docker build -t django-crud-app .
+docker run -p 8000:8000 django-crud-app
 ```
 
-2. The application will be available at `http://localhost:8000`
+2. For Dokploy deployment:
+   - Use the provided Dockerfile
+   - Set environment variables in Dokploy dashboard
+   - Application will be available at your configured domain
+
+3. The application will be available at your configured domain
 
 ## Usage
 
@@ -95,46 +101,41 @@ crud_project/
 │   ├── settings.py        # Django settings
 │   ├── urls.py            # Main URL configuration
 │   └── wsgi.py            # WSGI application
-├── Dockerfile             # Docker configuration
-├── docker-compose.yml     # Docker Compose setup
+├── Dockerfile             # Docker configuration optimized for Dokploy
 ├── requirements.txt       # Python dependencies
 └── manage.py             # Django management script
 ```
 
-## Docker Commands
+## Docker Commands for Dokploy
 
 ### Build and Run
 ```bash
-docker-compose up --build
+docker build -t django-crud-app .
 ```
 
-### Run in Background
+### Run locally for testing
 ```bash
-docker-compose up -d
+docker run -p 8000:8000 django-crud-app
 ```
 
 ### View Logs
 ```bash
-docker-compose logs -f
+docker logs <container-id>
 ```
 
-### Stop Services
+### Stop Container
 ```bash
-docker-compose down
+docker stop <container-id>
 ```
 
-### Clean Up
-```bash
-docker-compose down --volumes --remove-orphans
-```
+## Environment Variables for Dokploy
 
-## Environment Variables
+When deploying with Dokploy, configure these environment variables:
 
-When using Docker, you can customize the following environment variables:
-
-- `DEBUG=0` - Disable debug mode in production
-- `SECRET_KEY` - Django secret key
-- `DATABASE_URL` - Database connection string
+- `DEBUG=0` - Disable debug mode in production (set in Dockerfile)
+- `SECRET_KEY` - Django secret key (set in Dokploy environment variables)
+- `DATABASE_URL` - Database connection string (if using external database)
+- `ALLOWED_HOSTS` - Your domain name (set in Dokploy environment variables)
 
 ## License
 
