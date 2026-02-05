@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Django Single Page CRUD</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .form-container {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 6px;
+            margin-bottom: 30px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #495057;
+        }
+        
+        input[type="text"], textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        
+        textarea {
+            height: 100px;
+            resize: vertical;
+        }
+        
+        .btn {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        
+        .btn:hover {
+            background-color: #0056b3;
+        }
+        
+        .btn-secondary {
+            background-color: #6c757d;
+        }
+        
+        .btn-secondary:hover {
+            background-color: #545b62;
+        }
+        
+        .btn-danger {
+            background-color: #dc3545;
+        }
+        
+        .btn-danger:hover {
+            background-color: #c82333;
+        }
+        
+        .btn-success {
+            background-color: #28a745;
+        }
+        
+        .btn-success:hover {
+            background-color: #218838;
+        }
+        
+        .form-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .table-container {
+            overflow-x: auto;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            color: #495057;
+        }
+        
+        tr:hover {
+            background-color: #f1f3f4;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .loading {
+            text-align: center;
+            color: #6c757d;
+            font-style: italic;
+            padding: 20px;
+        }
+        
+        .alert {
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+            display: none;
+        }
+        
+        .alert-success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .alert-danger {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Ilhom aka veb sayti. AIFU 2-semestr dasturiy injiniring</h1>
+        
+        <div id="alert-container"></div>
+        
+        <div class="form-container">
+            <h3 id="form-title">Yangi element qo'shish</h3>
+            <form id="item-form">
+                <input type="hidden" id="item-id">
+                <div class="form-group">
+                    <label for="name">Nomi:</label>
+                    <input type="text" id="name" name="name" required>
+                </div>
+                <div class="form-group">
+                    <label for="description">Tavsif:</label>
+                    <textarea id="description" name="description" required></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn" id="submit-btn">Element qo'shish</button>
+                    <button type="button" class="btn btn-secondary" id="cancel-btn">Bekor qilish</button>
+                </div>
+            </form>
+        </div>
+        
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nomi</th>
+                        <th>Tavsif</th>
+                        <th>Yaratilgan vaqti</th>
+                        <th>Yangilangan vaqti</th>
+                        <th>Harakatlar</th>
+                    </tr>
+                </thead>
+                <tbody id="items-table-body">
+                    <tr>
+                        <td colspan="6" class="loading">Elementlar yuklanmoqda...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        class CRUDApp {
+            constructor() {
+                this.form = document.getElementById('item-form');
+                this.formTitle = document.getElementById('form-title');
+                this.submitBtn = document.getElementById('submit-btn');
+                this.cancelBtn = document.getElementById('cancel-btn');
+                this.itemsTableBody = document.getElementById('items-table-body');
+                this.alertContainer = document.getElementById('alert-container');
+                
+                this.currentItemId = null;
+                
+                this.init();
+            }
+            
+            init() {
+                this.form.addEventListener('submit', (e) => this.handleSubmit(e));
+                this.cancelBtn.addEventListener('click', () => this.resetForm());
+                
+                this.loadItems();
+            }
+            
+            async loadItems() {
+                try {
+                    const response = await fetch('/api/items/');
+                    const data = await response.json();
+                    
+                    if (data.items && data.items.length > 0) {
+                        this.renderItems(data.items);
+                    } else {
+                        this.itemsTableBody.innerHTML = '<tr><td colspan="6" class="loading">Hech qanday element topilmadi. Yuqoridagi tugmani bosing!</td></tr>';
+                    }
+                } catch (error) {
+                    this.showError('Elementlarni yuklashda xatolik: ' + error.message);
+                }
+            }
+            
+            renderItems(items) {
+                this.itemsTableBody.innerHTML = '';
+                
+                items.forEach(item => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${item.id}</td>
+                        <td>${this.escapeHtml(item.name)}</td>
+                        <td>${this.escapeHtml(item.description)}</td>
+                        <td>${item.created_at}</td>
+                        <td>${item.updated_at}</td>
+                        <td>
+                            <div class="action-buttons">
+                                <button class="btn btn-success" onclick="app.editItem(${item.id})">Edit</button>
+                                <button class="btn btn-danger" onclick="app.deleteItem(${item.id})">Delete</button>
+                            </div>
+                        </td>
+                    `;
+                    this.itemsTableBody.appendChild(row);
+                });
+            }
+            
+            async handleSubmit(e) {
+                e.preventDefault();
+                
+                const name = document.getElementById('name').value.trim();
+                const description = document.getElementById('description').value.trim();
+                
+                if (!name || !description) {
+                    this.showError('Iltimos, barcha maydonlarni to\'ldiring');
+                    return;
+                }
+                
+                const data = { name, description };
+                
+                try {
+                    let response;
+                    let successMessage;
+                    
+                    if (this.currentItemId) {
+                        // Update existing item
+                        response = await fetch(`/api/items/${this.currentItemId}/update/`, {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify(data)
+                        });
+                        successMessage = 'Element muvaffaqiyatli yangilandi!';
+                    } else {
+                        // Create new item
+                        response = await fetch('/api/items/create/', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify(data)
+                        });
+                        successMessage = 'Element muvaffaqiyatli qo\'shildi!';
+                    }
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        this.showSuccess(successMessage);
+                        this.resetForm();
+                        this.loadItems();
+                    } else {
+                        this.showError(result.error || 'Xatolik yuz berdi');
+                    }
+                } catch (error) {
+                    this.showError('Tarmoq xatosi: ' + error.message);
+                }
+            }
+            
+            editItem(id) {
+                this.currentItemId = id;
+                this.formTitle.textContent = 'Elementni tahrirlash';
+                this.submitBtn.textContent = 'Elementni yangilash';
+                this.cancelBtn.classList.remove('hidden');
+                
+                // Find and populate form with item data
+                this.loadItemData(id);
+            }
+            
+            async loadItemData(id) {
+                try {
+                    const response = await fetch(`/api/items/`);
+                    const data = await response.json();
+                    
+                    const item = data.items.find(item => item.id === id);
+                    if (item) {
+                        document.getElementById('name').value = item.name;
+                        document.getElementById('description').value = item.description;
+                    }
+                } catch (error) {
+                    this.showError('Element ma\'lumotlarini yuklashda xatolik: ' + error.message);
+                }
+            }
+            
+            async deleteItem(id) {
+                if (!confirm('Ushbu elementni o\'chirishga ishonchingiz komilmi?')) {
+                    return;
+                }
+                
+                try {
+                    const response = await fetch(`/api/items/${id}/delete/`, {
+                        method: 'DELETE'
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        this.showSuccess('Element muvaffaqiyatli o\'chirildi!');
+                        this.loadItems();
+                    } else {
+                        this.showError(result.error || 'Elementni o\'chirishda xatolik');
+                    }
+                } catch (error) {
+                    this.showError('Tarmoq xatosi: ' + error.message);
+                }
+            }
+            
+            resetForm() {
+                this.currentItemId = null;
+                this.formTitle.textContent = 'Yangi element qo\'shish';
+                this.submitBtn.textContent = 'Element qo\'shish';
+                this.cancelBtn.classList.add('hidden');
+                this.form.reset();
+            }
+            
+            showSuccess(message) {
+                this.showAlert(message, 'success');
+            }
+            
+            showError(message) {
+                this.showAlert(message, 'danger');
+            }
+            
+            showAlert(message, type) {
+                this.alertContainer.innerHTML = '';
+                const alert = document.createElement('div');
+                alert.className = `alert alert-${type}`;
+                alert.textContent = message;
+                this.alertContainer.appendChild(alert);
+                
+                alert.style.display = 'block';
+                
+                setTimeout(() => {
+                    alert.style.display = 'none';
+                }, 3000);
+            }
+            
+            escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+        }
+        
+        // Initialize the app when the page loads
+        let app;
+        document.addEventListener('DOMContentLoaded', () => {
+            app = new CRUDApp();
+        });
+    </script>
+</body>
+</html>
