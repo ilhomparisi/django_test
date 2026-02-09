@@ -237,6 +237,18 @@
             async loadItems() {
                 try {
                     const response = await fetch('/api/items/');
+                    
+                    // Check if response is OK
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    
+                    const contentType = response.headers.get('content-type');
+                    if (!contentType || !contentType.includes('application/json')) {
+                        const text = await response.text();
+                        throw new Error(`Expected JSON, got ${contentType}: ${text.substring(0, 200)}...`);
+                    }
+                    
                     const data = await response.json();
                     
                     if (data.items && data.items.length > 0) {
@@ -336,6 +348,8 @@
             
             async loadItemData(id) {
                 try {
+                    // For now, we'll get all items and find the specific one
+                    // In a real application, you'd want a specific endpoint for single items
                     const response = await fetch(`/api/items/`);
                     const data = await response.json();
                     
