@@ -1,42 +1,22 @@
 FROM python:3.11-slim
 
-# Set environment variables for Coolify
+# Set environment variables to prevent Python from writing pyc files to disk and unbuffer stdout/stderr
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
-ENV DEBUG=0
 
-# Set work directory
+# Set the working directory inside the container
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-        build-essential \
-        libpq-dev \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install Python dependencies
+# Copy the requirements file and install dependencies
 COPY requirements.txt /app/
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy project
+# Copy the entire Django project to the container
 COPY . /app/
 
-# Collect static files
-RUN python manage.py collectstatic --noinput
-
-# Create non-root user for security
-RUN groupadd -r appuser && useradd -r -g appuser appuser
-RUN chown -R appuser:appuser /app
-USER appuser
-
-# Expose port
+# Expose port 8000 for the Django app (this is for documentation/inter-container communication)
 EXPOSE 8000
 
-# Health check for Coolify
-HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8000/ || exit 1
-
-# Run the application
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "4", "--timeout", "120", "crud_project.wsgi:application"]
+# Command to run the Django development server
+# 0.0.0.0:8000 makes the server accessible from outside the container's loopback interface
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
